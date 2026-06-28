@@ -1,62 +1,61 @@
 # Crystal RCM Staffing System
 
-A purpose-built task management and workforce visibility platform for the Crystal RCM billing team. Built by Stanford Building Tech as part of a broader RCM modernization engagement.
+A task management and workforce visibility platform built for the Crystal RCM billing team. Gives managers real-time visibility into task assignment and workload, and gives billers a clear daily queue to work from.
 
-**Live app:** Deploy to Vercel (see instructions below)  
 **Stack:** React 19 · TypeScript · Vite · Supabase · Tailwind CSS v4 · shadcn/ui  
 **Last updated:** June 2026
 
 ---
 
-## What This Platform Does
+## Overview
 
-Crystal RCM processes insurance claims for 17+ optometry practices. Before this platform, task assignment and tracking happened through spreadsheets, Word documents, and memory. This system gives managers real-time visibility into who is working on what, and gives billers a clear daily queue to work from.
+The Crystal RCM team processes insurance claims across 17+ optometry practices. This platform replaces spreadsheets and Word documents with a centralized system for assigning tasks, tracking completion, and monitoring team productivity in real time.
 
-It is intentionally simple — this is one deliverable in a larger engagement. The goal is scheduling visibility, task accountability, and productivity tracking. Automation (RPA, eligibility verification, etc.) is a separate workstream.
+It is intentionally focused — scheduling visibility, task accountability, and productivity tracking. The goal is to make it easy for managers to see who is working on what, and for billers to know exactly what to do each day.
 
 ---
 
 ## Features
 
-### For Managers
+### Manager Features
 
-**Dashboard**
+**Dashboard (`/dashboard`)**
 - Live stat cards: Completed Today, Open, In Progress, Overdue
 - Tasks by Employee table — open, in progress, overdue, and done-today counts per biller
-- Daily Completion Summary — scrollable list of all tasks completed today with who did them and when
+- Daily Completion Summary — all tasks completed today, who did them, and at what time
 - Blocked Tasks panel — flagged tasks surfaced immediately with links to resolve
-- Export CSV — downloads all tasks as a spreadsheet with one click
+- Export CSV — downloads all tasks as a spreadsheet
 
-**Task Board**
-- Full task list with sorting and filters: Status, Employee, Client, Task Type
+**Task Board (`/tasks`)**
+- Full task list with filters: Status, Employee, Client, Task Type
 - Create, edit, and delete tasks
 - Color coding: overdue tasks highlighted red, blocked tasks highlighted orange
 - Export current filtered view to CSV
 
-**Task Detail**
-- Full task metadata: client, assignee, due date, follow-up date, created date, completed date
-- Accountability display: "Completed by [Name] at [time]" when a task is finished
+**Task Detail (`/tasks/:id`)**
+- Full task metadata: client, assignee, due date, follow-up date, created date
+- Accountability: shows "Completed by [Name] at [time]" when a task is finished
 - Inline status update (Pending → In Progress → Complete → Blocked)
-- Notes field (editable)
-- Activity Log: timestamped comment thread per task — billers log calls made, payer responses, blockers, submission notes
-- Time Tracking: log minutes spent on a task with an optional note; shows total time accumulated
+- Notes field (editable by manager)
+- **Activity Log** — timestamped comment thread per task. Billers log calls made, payer responses, submission notes, and blockers. Each entry shows the author's name and timestamp.
+- **Time Tracking** — log minutes spent on a task with an optional note. Shows running total accumulated across all entries.
 
-**Team Management** (`/team`)
+**Team Management (`/team`)**
 - Lists all employees and managers with name, email, specialty, and join date
 - Add new team members directly in the app — no Supabase dashboard access needed
-- Sets role (manager or employee) and specialty (Payment Poster, AR Specialist, Claims Scrubber)
+- Set role (manager or employee) and specialty (Payment Poster, AR Specialist, Claims Scrubber)
 
-### For Employees
+### Employee Features
 
-**My Queue** (`/queue`)
+**My Queue (`/queue`)**
 - Shows only tasks assigned to the logged-in employee
-- Sorted by priority: Denial Appeals first, then by priority level, then by due date
+- Sorted by priority: Denial Appeals always first, then by priority level (High → Medium → Low), then by due date
 - Filter by client
-- Overdue tasks highlighted red, due-within-24h tasks highlighted orange with a "Due Soon" badge
-- Mark Complete (with optional completion note) and Mark Blocked (requires reason) directly from queue
-- Denial appeal tasks flagged with a ⚑ icon for immediate visibility
+- Overdue tasks highlighted red, due-within-24h tasks show a "Due Soon" badge
+- Mark Complete (with optional note) and Mark Blocked (requires reason) directly from queue
+- Denial appeal tasks flagged with a ⚑ icon
 
-### Task Types Supported
+### Task Types
 - Payment Posting
 - Claims Scrubbing
 - ERA Pulling
@@ -65,26 +64,26 @@ It is intentionally simple — this is one deliverable in a larger engagement. T
 - Denial Appeal
 
 ### Real-Time Updates
-All changes sync instantly across all open browser windows via Supabase Realtime. When an employee flags a task as blocked, the manager sees a notification badge in the header immediately — no refresh needed.
+All changes sync instantly across all open browser windows via Supabase Realtime. When an employee flags a task as blocked, managers see a notification badge in the header immediately.
 
-### Email Notifications (optional, requires setup)
-A Supabase Edge Function (`supabase/functions/notify-manager/`) is included. When deployed, it sends an email to all managers when any employee flags a task as blocked. Requires a Resend API key. See "Email Notifications Setup" below.
+### Email Notifications (optional)
+A Supabase Edge Function is included that emails all managers when a task is flagged as blocked. Requires deployment and a Resend API key — see setup instructions below.
 
 ---
 
 ## Database Schema
 
-The schema lives in `supabase/schema.sql`. Key tables:
+All tables live in Supabase Postgres. Run `supabase/schema.sql` to initialize.
 
 | Table | Purpose |
 |---|---|
 | `profiles` | One row per user. Linked to Supabase Auth. Stores name, email, role, specialty. Auto-created on signup via trigger. |
 | `clients` | The optometry practices Crystal serves. |
-| `tasks` | Core work items. Has task type, status, priority, due date, follow-up date, assigned employee, client, notes. |
-| `task_comments` | Activity log entries per task. Each comment has an author and timestamp. |
-| `time_entries` | Time logged per task. Stores duration in minutes and an optional note. |
+| `tasks` | Core work items. Task type, status, priority, due date, follow-up date, assigned employee, client, notes, completed timestamp. |
+| `task_comments` | Activity log entries per task. Author, body, timestamp. |
+| `time_entries` | Time logged per task. Duration in minutes, optional note, employee. |
 
-Row Level Security (RLS) is enabled on all tables. Managers can see everything; employees can only see tasks assigned to them.
+Row Level Security (RLS) is enabled on all tables. Managers see everything; employees only see tasks assigned to them.
 
 ---
 
@@ -92,12 +91,12 @@ Row Level Security (RLS) is enabled on all tables. Managers can see everything; 
 
 | Layer | Technology |
 |---|---|
-| Frontend framework | React 19 + TypeScript |
+| Frontend | React 19 + TypeScript |
 | Build tool | Vite |
 | Routing | React Router v7 |
 | Data fetching | TanStack Query v5 |
 | Backend / database | Supabase (Postgres + Auth + Realtime) |
-| UI components | shadcn/ui (nova preset, Tailwind v4) |
+| UI components | shadcn/ui (Tailwind v4) |
 | Forms + validation | react-hook-form + zod |
 | Date utilities | date-fns v4 |
 | Icons | lucide-react |
@@ -111,22 +110,22 @@ src/
   components/
     auth/           AuthProvider, ProtectedRoute
     layout/         AppShell (sidebar + header)
-    realtime/       RealtimeProvider (Supabase channel subscriptions)
+    realtime/       RealtimeProvider (Supabase Realtime subscriptions)
     tasks/          CreateEditTaskModal, TaskBadges, TaskComments, TaskFilters, TimeTracker
-    ui/             shadcn/ui primitives
+    ui/             shadcn/ui component primitives
   hooks/
-    useAuth.ts          Current user session + profile
-    useClients.ts       Client list queries
-    useCreateUser.ts    In-app user creation (secondary Supabase client)
-    useMetrics.ts       Dashboard aggregate metrics
-    useNotificationCount.ts  Flagged task badge count
-    useProfiles.ts      Employee/manager list queries
-    useTaskComments.ts  Comment CRUD
-    useTasks.ts         Task CRUD + flag/complete mutations
-    useTimeTracking.ts  Time entry CRUD
+    useAuth.ts              Current user session + profile
+    useClients.ts           Client list queries
+    useCreateUser.ts        In-app user creation
+    useMetrics.ts           Dashboard aggregate metrics
+    useNotificationCount.ts Flagged task badge count
+    useProfiles.ts          Employee/manager list queries
+    useTaskComments.ts      Comment CRUD
+    useTasks.ts             Task CRUD + flag/complete mutations
+    useTimeTracking.ts      Time entry CRUD
   lib/
     exportCSV.ts    CSV download utility
-    supabase.ts     Supabase client initialization
+    supabase.ts     Supabase client
   pages/
     LoginPage.tsx
     ManagerDashboard.tsx
@@ -135,52 +134,29 @@ src/
     TaskDetail.tsx
     TeamManagement.tsx
   types/
-    database.ts     TypeScript types for all DB entities
+    database.ts     TypeScript interfaces for all DB entities
 
 supabase/
-  schema.sql                        Full database schema (run first)
+  schema.sql                        Full DB schema — run this first
   migrations/
     002_comments_time_tracking.sql  Adds task_comments, time_entries, follow_up_date
   functions/
-    notify-manager/index.ts         Edge function for email alerts
+    notify-manager/index.ts         Edge function for email alerts on blocked tasks
 ```
 
 ---
 
-## Taking Over the Project (CTO Handoff)
+## Setup & Deployment
 
-### What You're Receiving
-- Full source code in this GitHub repository
-- A running Supabase project with the database schema applied
-- A working development environment (tested June 2026)
+### Prerequisites
+- Node.js 18+
+- A Supabase project (free tier works for development; use Pro for production)
 
-### Credentials and Access
-
-**GitHub:** Request transfer of this repository to your GitHub org via Settings → Transfer Repository, or add your team as collaborators under Settings → Collaborators.
-
-**Supabase:** The project is at `https://supabase.com` under the current owner's account. To take ownership: Supabase Dashboard → Project Settings → General → Transfer Project. You will need a Supabase account. After transfer, upgrade to the **Pro plan ($25/month)** — the free tier pauses inactive projects after 7 days, which will break a production app.
-
-**Environment variables:** You need two values from Supabase → Project Settings → API:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-### Deploying to Production (Vercel)
-
-1. Push the repository to your GitHub org
-2. Go to [vercel.com](https://vercel.com) and click "Add New Project"
-3. Import the GitHub repository — Vercel auto-detects Vite
-4. Under Environment Variables, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-5. Click Deploy
-
-You will get a URL like `crystal-rcm.vercel.app`. You can add a custom domain (e.g. `app.crystalrcm.com`) under the Vercel project's Domains settings.
-
-Every push to `main` will automatically trigger a new deployment.
-
-### Running Locally
+### Local Development
 
 ```bash
 # 1. Clone the repo
-git clone <repo-url>
+git clone https://github.com/lshuman123/crystal-task-optimizer.git
 cd crystal-task-optimizer
 
 # 2. Install dependencies
@@ -188,79 +164,90 @@ npm install
 
 # 3. Create environment file
 cp .env.local.example .env.local
-# Edit .env.local and fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+# Fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+# (found in Supabase → Project Settings → API)
 
-# 4. Start development server
+# 4. Start dev server
 npm run dev
-# App runs at http://localhost:5173
+# Runs at http://localhost:5173
 ```
 
-### Database Setup (for a fresh Supabase project)
+### Database Setup
 
-Run these files in the Supabase SQL Editor in order:
+Run these in the Supabase SQL Editor in order:
 
-1. `supabase/schema.sql` — creates all tables, RLS policies, and triggers
-2. `supabase/migrations/002_comments_time_tracking.sql` — adds comments, time tracking, and follow-up date
+1. **`supabase/schema.sql`** — creates all tables, RLS policies, and auth trigger
+2. **`supabase/migrations/002_comments_time_tracking.sql`** — adds comments, time tracking, and follow-up date column
 
-### Adding Team Members
+### Deploying to Production (Vercel)
 
-**Option 1 — In-app (recommended):** Log in as a manager → Team → Add Member. Fill in name, email, temporary password, role, and specialty.
+1. Push the repo to GitHub
+2. Go to [vercel.com](https://vercel.com) → New Project → import the repo
+3. Add environment variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+4. Deploy
 
-> For immediate login without email confirmation: Supabase Dashboard → Authentication → Settings → disable "Enable email confirmations".
+Every push to `main` triggers a redeploy automatically. Add a custom domain under the Vercel project's Domains settings.
 
-**Option 2 — Supabase dashboard:** Authentication → Users → Add User. The database trigger auto-creates the profile row.
+> **Important:** Upgrade your Supabase project to the **Pro plan ($25/month)** before going live. The free tier pauses projects after 7 days of inactivity.
 
-### Making Code Changes
+---
 
-The codebase follows a consistent pattern:
-- **New data features:** Add a hook in `src/hooks/`, model the type in `src/types/database.ts`, add the SQL migration in `supabase/migrations/`
-- **New pages:** Add the page component in `src/pages/`, add the route in `src/App.tsx`, add the nav item in `src/components/layout/AppShell.tsx`
-- **UI components:** Use shadcn/ui primitives from `src/components/ui/` — see [ui.shadcn.com](https://ui.shadcn.com) for docs
+## Adding Team Members
 
-### Email Notifications Setup (optional)
+**In-app (recommended):** Log in as a manager → Team → Add Member. Fill in name, email, temporary password, role, and specialty.
 
-To enable email alerts when employees flag blocked tasks:
+> For immediate access without email confirmation: Supabase Dashboard → Authentication → Settings → disable "Enable email confirmations".
+
+**Via Supabase dashboard:** Authentication → Users → Add User. The database trigger auto-creates the profile row on signup.
+
+---
+
+## Email Notifications Setup (optional)
+
+When enabled, managers receive an email whenever an employee flags a task as blocked.
 
 1. Create a [Resend](https://resend.com) account and get an API key
 2. Install the Supabase CLI: `npm install -g supabase`
-3. Deploy the edge function:
+3. Deploy the function and set secrets:
    ```bash
    supabase functions deploy notify-manager
    supabase secrets set RESEND_API_KEY=re_your_key_here
    supabase secrets set FROM_EMAIL=noreply@yourdomain.com
-   supabase secrets set APP_URL=https://your-vercel-url.vercel.app
+   supabase secrets set APP_URL=https://your-app-url.vercel.app
    ```
 
-The function (`supabase/functions/notify-manager/index.ts`) is already written. It fetches all manager emails from the database and sends each one a formatted email when a task is flagged.
+The function is already written at `supabase/functions/notify-manager/index.ts`. It queries all manager emails from the database and sends each one a formatted alert.
 
 ---
 
-## What's Not Yet Built
+## Extending the Platform
 
-The following are known gaps identified during the site visit and are candidates for future development:
+The codebase is structured to make additions straightforward:
 
-- **Eligibility verification integration** — identified as the top automation priority. Requires payer portal scraping or 271 API integration.
-- **RPA for payment posting** — automate ERA pulling from clearinghouses (Trizetto/Apex). Crystal's API is in development and will expose billing data via a cloud API.
-- **Client-facing reporting dashboard** — practices currently have no visibility into their billing status.
-- **Audit log** — track who changed what and when (important for compliance).
-- **Bulk task assignment** — assign multiple tasks at once.
-- **Crystal PM API integration** — Alan (CTO) is building an MCP server to expose Crystal PM data. Once available, this platform can pull task data directly from the PM system rather than requiring manual entry.
+- **New data features:** Add a hook in `src/hooks/`, define the type in `src/types/database.ts`, add an SQL migration in `supabase/migrations/`
+- **New pages:** Add the component in `src/pages/`, register the route in `src/App.tsx`, add the nav link in `src/components/layout/AppShell.tsx`
+- **UI components:** All UI primitives are in `src/components/ui/` — see [ui.shadcn.com](https://ui.shadcn.com)
+
+---
+
+## Known Gaps / Future Roadmap
+
+These were identified as high-value next steps but are outside the current scope:
+
+- **Eligibility verification** — the highest-priority automation opportunity. Requires 271 API or payer portal integration.
+- **Crystal PM API integration** — once the Crystal PM cloud API is available, tasks can be pulled directly from the PM system rather than entered manually.
+- **RPA for payment posting / ERA pulling** — automate the daily clearinghouse workflow currently done manually.
+- **Client-facing reporting** — give practices visibility into their own billing status.
+- **Audit log** — track all status changes and edits with full history (important for compliance).
+- **Bulk task assignment** — assign multiple tasks to an employee at once.
 
 ---
 
 ## Available Scripts
 
 ```bash
-npm run dev       # Start development server
+npm run dev       # Development server (localhost:5173)
 npm run build     # Production build
 npm run preview   # Preview production build locally
-npm run lint      # Run ESLint
+npm run lint      # ESLint
 ```
-
----
-
-## Built By
-
-Stanford Building Tech — [lukeshuman@shumanco.com](mailto:lukeshuman@shumanco.com)
-
-This platform was delivered as part of a revenue cycle management modernization engagement with Crystal RCM (June 2026).
