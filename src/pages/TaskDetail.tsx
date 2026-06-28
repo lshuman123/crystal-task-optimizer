@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTask, useUpdateTask, useCompleteTask, useFlagTask } from '@/hooks/useTasks'
 import { useAuth } from '@/hooks/useAuth'
 import { CreateEditTaskModal } from '@/components/tasks/CreateEditTaskModal'
+import { TaskComments } from '@/components/tasks/TaskComments'
+import { TimeTracker } from '@/components/tasks/TimeTracker'
 import { PriorityBadge, StatusBadge, TaskTypeIcon, TaskTypeLabel } from '@/components/tasks/TaskBadges'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -77,7 +79,12 @@ export default function TaskDetail() {
 
   async function handleFlag() {
     if (!flagReason.trim()) return
-    await flagTask.mutateAsync({ id: task!.id, reason: flagReason })
+    await flagTask.mutateAsync({
+      id: task!.id,
+      reason: flagReason,
+      flaggedBy: profile?.name,
+      taskTitle: task!.title,
+    })
     setFlagOpen(false)
     setFlagReason('')
   }
@@ -95,6 +102,7 @@ export default function TaskDetail() {
         </Button>
       </div>
 
+      {/* Main task card */}
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between gap-4">
@@ -128,13 +136,22 @@ export default function TaskDetail() {
               <p>{task.due_date ? format(parseISO(task.due_date), 'MMMM d, yyyy') : '—'}</p>
             </div>
             <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Follow-up Date</p>
+              <p className={task.follow_up_date ? 'text-amber-700 font-medium' : ''}>
+                {task.follow_up_date ? format(parseISO(task.follow_up_date), 'MMMM d, yyyy') : '—'}
+              </p>
+            </div>
+            <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Created</p>
               <p>{format(parseISO(task.created_at), 'MMMM d, yyyy')}</p>
             </div>
             {task.completed_at && (
               <div>
                 <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Completed</p>
-                <p>{format(parseISO(task.completed_at), 'MMM d, h:mm a')}</p>
+                <p className="text-green-700 font-medium">
+                  {task.assignee?.name ? `${task.assignee.name} · ` : ''}
+                  {format(parseISO(task.completed_at), 'MMM d, h:mm a')}
+                </p>
               </div>
             )}
           </div>
@@ -160,13 +177,22 @@ export default function TaskDetail() {
             <div className="flex items-center justify-between">
               <Label>Notes</Label>
               {notesEdit === null ? (
-                <Button variant="ghost" size="sm" className="h-6 gap-1 text-xs" onClick={() => setNotesEdit(task.notes ?? '')}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 text-xs"
+                  onClick={() => setNotesEdit(task.notes ?? '')}
+                >
                   <Pencil className="h-3 w-3" /> Edit
                 </Button>
               ) : (
                 <div className="flex gap-1.5">
-                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setNotesEdit(null)}>Cancel</Button>
-                  <Button size="sm" className="h-6 text-xs" onClick={handleSaveNotes} disabled={updateTask.isPending}>Save</Button>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setNotesEdit(null)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" className="h-6 text-xs" onClick={handleSaveNotes} disabled={updateTask.isPending}>
+                    Save
+                  </Button>
                 </div>
               )}
             </div>
@@ -200,6 +226,20 @@ export default function TaskDetail() {
         </CardContent>
       </Card>
 
+      {/* Activity log */}
+      <Card>
+        <CardContent className="pt-5">
+          <TaskComments taskId={task.id} />
+        </CardContent>
+      </Card>
+
+      {/* Time tracking */}
+      <Card>
+        <CardContent className="pt-5">
+          <TimeTracker taskId={task.id} />
+        </CardContent>
+      </Card>
+
       <CreateEditTaskModal open={editOpen} onOpenChange={setEditOpen} task={task} />
 
       <Dialog open={completeOpen} onOpenChange={setCompleteOpen}>
@@ -226,12 +266,21 @@ export default function TaskDetail() {
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label>Reason *</Label>
-              <Textarea rows={3} placeholder="e.g. Missing documentation, awaiting callback…" value={flagReason} onChange={e => setFlagReason(e.target.value)} />
+              <Textarea
+                rows={3}
+                placeholder="e.g. Missing documentation, awaiting payer callback…"
+                value={flagReason}
+                onChange={e => setFlagReason(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFlagOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleFlag} disabled={!flagReason.trim() || flagTask.isPending}>
+            <Button
+              variant="destructive"
+              onClick={handleFlag}
+              disabled={!flagReason.trim() || flagTask.isPending}
+            >
               {flagTask.isPending ? 'Saving…' : 'Mark Blocked'}
             </Button>
           </DialogFooter>

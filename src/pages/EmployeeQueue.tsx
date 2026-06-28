@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTasks, useCompleteTask, useFlagTask } from '@/hooks/useTasks'
 import { useAuth } from '@/hooks/useAuth'
+import { useClients } from '@/hooks/useClients'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import {
   PriorityBadge,
   StatusBadge,
@@ -53,6 +57,7 @@ function taskAlertState(task: Task): 'overdue' | 'due-soon' | null {
 export default function EmployeeQueue() {
   const { profile } = useAuth()
   const { data: allTasks, isLoading } = useTasks()
+  const { data: clients = [] } = useClients()
   const completeTask = useCompleteTask()
   const flagTask = useFlagTask()
 
@@ -60,9 +65,13 @@ export default function EmployeeQueue() {
   const [flagModal, setFlagModal] = useState<{ open: boolean; task: Task | null }>({ open: false, task: null })
   const [completeNote, setCompleteNote] = useState('')
   const [flagReason, setFlagReason] = useState('')
+  const [clientFilter, setClientFilter] = useState<string>('all')
 
+  const myTasks = (allTasks ?? []).filter(
+    t => t.assigned_to === profile?.id && t.status !== 'complete'
+  )
   const tasks = sortQueue(
-    (allTasks ?? []).filter(t => t.assigned_to === profile?.id && t.status !== 'complete')
+    clientFilter === 'all' ? myTasks : myTasks.filter(t => t.client_id === clientFilter)
   )
 
   async function handleComplete() {
@@ -74,18 +83,38 @@ export default function EmployeeQueue() {
 
   async function handleFlag() {
     if (!flagModal.task || !flagReason.trim()) return
-    await flagTask.mutateAsync({ id: flagModal.task.id, reason: flagReason })
+    await flagTask.mutateAsync({
+      id: flagModal.task.id,
+      reason: flagReason,
+      flaggedBy: profile?.name,
+      taskTitle: flagModal.task.title,
+    })
     setFlagModal({ open: false, task: null })
     setFlagReason('')
   }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold">My Queue</h1>
-        <p className="text-sm text-muted-foreground">
-          {isLoading ? 'Loading…' : `${tasks.length} active task${tasks.length !== 1 ? 's' : ''}`}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-semibold">My Queue</h1>
+          <p className="text-sm text-muted-foreground">
+            {isLoading ? 'Loading…' : `${tasks.length} active task${tasks.length !== 1 ? 's' : ''}`}
+          </p>
+        </div>
+        {clients.length > 0 && (
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="h-8 w-44 text-xs">
+              <SelectValue placeholder="All Clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {clients.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="space-y-2">

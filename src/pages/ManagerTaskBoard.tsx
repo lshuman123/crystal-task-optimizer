@@ -22,10 +22,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Plus, MoreHorizontal, Pencil, Trash2, ExternalLink, ListTodo } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, ExternalLink, ListTodo, Download } from 'lucide-react'
 import type { Task } from '@/types/database'
 import { format, isPast, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { exportCSV } from '@/lib/exportCSV'
 
 export default function ManagerTaskBoard() {
   const [filters, setFilters] = useState<TaskFilters>({})
@@ -50,6 +51,24 @@ export default function ManagerTaskBoard() {
     }
   }
 
+  function handleExport() {
+    if (!tasks?.length) return
+    const rows = tasks.map(t => ({
+      Title:           t.title,
+      Type:            t.task_type.replace(/_/g, ' '),
+      Client:          t.client?.name ?? '',
+      'Assigned To':   t.assignee?.name ?? '',
+      Priority:        t.priority,
+      Status:          t.status,
+      'Due Date':      t.due_date ?? '',
+      'Follow-up':     t.follow_up_date ?? '',
+      'Completed At':  t.completed_at ? format(parseISO(t.completed_at), 'yyyy-MM-dd HH:mm') : '',
+      Created:         format(parseISO(t.created_at), 'yyyy-MM-dd'),
+      Notes:           t.notes ?? '',
+    }))
+    exportCSV(rows, `crystal-tasks-${format(new Date(), 'yyyy-MM-dd')}.csv`)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -59,10 +78,16 @@ export default function ManagerTaskBoard() {
             {tasks ? `${tasks.length} task${tasks.length !== 1 ? 's' : ''}` : 'Loading…'}
           </p>
         </div>
-        <Button onClick={handleCreate} size="sm" className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          New Task
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport} disabled={!tasks?.length}>
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <Button onClick={handleCreate} size="sm" className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            New Task
+          </Button>
+        </div>
       </div>
 
       <TaskFiltersBar filters={filters} onChange={setFilters} />

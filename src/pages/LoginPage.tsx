@@ -42,7 +42,7 @@ export default function LoginPage() {
             <Activity className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-semibold tracking-tight">Crystal RCM</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Crystal RCM Staffing System</h1>
             <p className="text-sm text-muted-foreground">Revenue Cycle Management</p>
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
   LogOut,
   CheckSquare,
   Bell,
+  Users,
 } from 'lucide-react'
 import { useNotificationCount } from '@/hooks/useNotificationCount'
 
@@ -20,8 +21,9 @@ interface NavItem {
 }
 
 const managerNav: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Task Board', href: '/tasks', icon: ListTodo },
+  { label: 'Dashboard',  href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Task Board', href: '/tasks',     icon: ListTodo },
+  { label: 'Team',       href: '/team',      icon: Users },
 ]
 
 const employeeNav: NavItem[] = [

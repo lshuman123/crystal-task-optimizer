@@ -39,6 +39,7 @@ export interface Task {
   priority: Priority
   status: TaskStatus
   due_date: string | null
+  follow_up_date: string | null
   notes: string | null
   created_at: string
   completed_at: string | null

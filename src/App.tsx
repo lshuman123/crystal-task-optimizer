@@ -10,6 +10,7 @@ import ManagerDashboard from '@/pages/ManagerDashboard'
 import ManagerTaskBoard from '@/pages/ManagerTaskBoard'
 import EmployeeQueue from '@/pages/EmployeeQueue'
 import TaskDetail from '@/pages/TaskDetail'
+import TeamManagement from '@/pages/TeamManagement'
 import { RealtimeProvider } from '@/components/realtime/RealtimeProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
@@ -47,6 +48,15 @@ export default function App() {
                 element={
                   <ProtectedRoute requiredRole="employee">
                     <AppShell><EmployeeQueue /></AppShell>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/team"
+                element={
+                  <ProtectedRoute requiredRole="manager">
+                    <AppShell><TeamManagement /></AppShell>
                   </ProtectedRoute>
                 }
               />

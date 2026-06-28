@@ -1,5 +1,7 @@
 import { useMetrics } from '@/hooks/useMetrics'
+import { useTasks } from '@/hooks/useTasks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -15,11 +17,38 @@ import {
   Circle,
   Loader2,
   Flag,
+  Download,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Link } from 'react-router-dom'
+import { PriorityBadge } from '@/components/tasks/TaskBadges'
+import { format, parseISO, startOfDay } from 'date-fns'
+import { exportCSV } from '@/lib/exportCSV'
+import type { Task } from '@/types/database'
+
+function taskToRow(t: Task) {
+  return {
+    Title:       t.title,
+    Type:        t.task_type.replace(/_/g, ' '),
+    Client:      t.client?.name ?? '',
+    'Assigned To': t.assignee?.name ?? '',
+    Priority:    t.priority,
+    Status:      t.status,
+    'Due Date':  t.due_date ?? '',
+    'Follow-up': t.follow_up_date ?? '',
+    'Completed At': t.completed_at ? format(parseISO(t.completed_at), 'yyyy-MM-dd HH:mm') : '',
+    'Created':   format(parseISO(t.created_at), 'yyyy-MM-dd'),
+  }
+}
 
 export default function ManagerDashboard() {
   const { data: metrics, isLoading, isError, error } = useMetrics()
+  const { data: allTasks = [] } = useTasks()
+
+  function handleExport() {
+    if (!allTasks.length) return
+    exportCSV(allTasks.map(taskToRow), `crystal-rcm-tasks-${format(new Date(), 'yyyy-MM-dd')}.csv`)
+  }
 
   if (isLoading) {
     return (
@@ -47,9 +76,20 @@ export default function ManagerDashboard() {
 
   const { completedToday, totalOpen, totalInProgress, totalOverdue, byEmployee } = metrics
 
+  const todayStart = startOfDay(new Date())
+  const completedTodayTasks = allTasks.filter(
+    t => t.completed_at && new Date(t.completed_at) >= todayStart
+  )
+
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Dashboard</h1>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Button>
+      </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -59,12 +99,47 @@ export default function ManagerDashboard() {
         <StatCard label="Overdue" value={totalOverdue} icon={<AlertTriangle className="h-4 w-4 text-red-500" />} alert={totalOverdue > 0} />
       </div>
 
+      {/* Today's completed tasks */}
+      {completedTodayTasks.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2 text-green-700">
+              <CheckCircle2 className="h-4 w-4" />
+              Completed Today
+              <span className="ml-auto text-xs font-normal text-green-600">{completedTodayTasks.length}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y max-h-56 overflow-y-auto">
+              {completedTodayTasks.map(task => (
+                <Link
+                  key={task.id}
+                  to={`/tasks/${task.id}`}
+                  className="flex items-center justify-between px-4 py-2.5 hover:bg-green-50/50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{task.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {task.assignee?.name ?? 'Unassigned'} · {task.client?.name ?? '—'}
+                      {task.completed_at && (
+                        <span className="ml-2 text-green-600">
+                          {format(parseISO(task.completed_at), 'h:mm a')}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <PriorityBadge priority={task.priority} />
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* By employee */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            Tasks by Employee
-          </CardTitle>
+          <CardTitle className="text-sm">Tasks by Employee</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {byEmployee.length === 0 ? (
@@ -107,8 +182,8 @@ export default function ManagerDashboard() {
         </CardContent>
       </Card>
 
-      {/* Blocked tasks callout */}
-      {totalOpen > 0 && <BlockedTasksPanel />}
+      {/* Blocked tasks */}
+      <BlockedTasksPanel />
     </div>
   )
 }
@@ -131,10 +206,6 @@ function StatCard({ label, value, icon, alert }: {
     </Card>
   )
 }
-
-import { useTasks } from '@/hooks/useTasks'
-import { Link } from 'react-router-dom'
-import { PriorityBadge } from '@/components/tasks/TaskBadges'
 
 function BlockedTasksPanel() {
   const { data: tasks } = useTasks({ status: 'flagged' })

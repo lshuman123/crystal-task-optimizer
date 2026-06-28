@@ -60,6 +60,7 @@ interface CreateTaskInput {
   priority: Priority
   status?: TaskStatus
   due_date?: string | null
+  follow_up_date?: string | null
   notes?: string | null
 }
 
@@ -141,7 +142,17 @@ export function useCompleteTask() {
 export function useFlagTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+    mutationFn: async ({
+      id,
+      reason,
+      flaggedBy,
+      taskTitle,
+    }: {
+      id: string
+      reason: string
+      flaggedBy?: string
+      taskTitle?: string
+    }) => {
       const { data: current } = await supabase.from('tasks').select('notes').eq('id', id).single()
       const newNotes = current?.notes
         ? `${current.notes}\n\n⚑ Blocked: ${reason}`
@@ -152,6 +163,15 @@ export function useFlagTask() {
         .update({ status: 'flagged', notes: newNotes })
         .eq('id', id)
       if (error) throw error
+
+      // Notify managers via edge function — fails silently if not deployed
+      try {
+        await supabase.functions.invoke('notify-manager', {
+          body: { taskId: id, taskTitle: taskTitle ?? 'Task', flaggedBy: flaggedBy ?? 'An employee', reason },
+        })
+      } catch {
+        // Edge function not deployed — in-app notification still works
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] })

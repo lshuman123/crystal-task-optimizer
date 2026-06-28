@@ -26,14 +26,15 @@ import { useEmployees } from '@/hooks/useProfiles'
 import type { Task, Priority, TaskType, TaskStatus } from '@/types/database'
 
 const schema = z.object({
-  title:       z.string().min(1, 'Title is required'),
-  task_type:   z.enum(['payment_posting', 'claims_scrubbing', 'era_pulling', 'eligibility_verification', 'ar_followup', 'denial_appeal']),
-  client_id:   z.string().optional(),
-  assigned_to: z.string().optional(),
-  priority:    z.enum(['high', 'medium', 'low']),
-  status:      z.enum(['pending', 'in_progress', 'complete', 'flagged']),
-  due_date:    z.string().optional(),
-  notes:       z.string().optional(),
+  title:          z.string().min(1, 'Title is required'),
+  task_type:      z.enum(['payment_posting', 'claims_scrubbing', 'era_pulling', 'eligibility_verification', 'ar_followup', 'denial_appeal']),
+  client_id:      z.string().optional(),
+  assigned_to:    z.string().optional(),
+  priority:       z.enum(['high', 'medium', 'low']),
+  status:         z.enum(['pending', 'in_progress', 'complete', 'flagged']),
+  due_date:       z.string().optional(),
+  follow_up_date: z.string().optional(),
+  notes:          z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -54,21 +55,23 @@ export function CreateEditTaskModal({ open, onOpenChange, task }: Props) {
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      title: '', task_type: 'payment_posting', client_id: '__none__', assigned_to: '__none__', priority: 'medium', status: 'pending',
+      title: '', task_type: 'payment_posting', client_id: '__none__', assigned_to: '__none__',
+      priority: 'medium', status: 'pending', due_date: '', follow_up_date: '',
     },
   })
 
   useEffect(() => {
     if (task) {
       reset({
-        title:       task.title,
-        task_type:   task.task_type,
-        client_id:   task.client_id ?? '__none__',
-        assigned_to: task.assigned_to ?? '__none__',
-        priority:    task.priority,
-        status:      task.status,
-        due_date:    task.due_date ?? '',
-        notes:       task.notes ?? '',
+        title:          task.title,
+        task_type:      task.task_type,
+        client_id:      task.client_id ?? '__none__',
+        assigned_to:    task.assigned_to ?? '__none__',
+        priority:       task.priority,
+        status:         task.status,
+        due_date:       task.due_date ?? '',
+        follow_up_date: task.follow_up_date ?? '',
+        notes:          task.notes ?? '',
       })
     } else {
       reset({ title: '', task_type: 'payment_posting', client_id: '__none__', assigned_to: '__none__', priority: 'medium', status: 'pending' })
@@ -77,14 +80,15 @@ export function CreateEditTaskModal({ open, onOpenChange, task }: Props) {
 
   async function onSubmit(values: FormValues) {
     const payload = {
-      title:       values.title,
-      task_type:   values.task_type as TaskType,
-      client_id:   (values.client_id && values.client_id !== '__none__') ? values.client_id : null,
-      assigned_to: (values.assigned_to && values.assigned_to !== '__none__') ? values.assigned_to : null,
-      priority:    values.priority as Priority,
-      status:      values.status as TaskStatus,
-      due_date:    values.due_date || null,
-      notes:       values.notes || null,
+      title:          values.title,
+      task_type:      values.task_type as TaskType,
+      client_id:      (values.client_id && values.client_id !== '__none__') ? values.client_id : null,
+      assigned_to:    (values.assigned_to && values.assigned_to !== '__none__') ? values.assigned_to : null,
+      priority:       values.priority as Priority,
+      status:         values.status as TaskStatus,
+      due_date:       values.due_date || null,
+      ...(values.follow_up_date ? { follow_up_date: values.follow_up_date } : {}),
+      notes:          values.notes || null,
     }
 
     try {
@@ -191,6 +195,13 @@ export function CreateEditTaskModal({ open, onOpenChange, task }: Props) {
               <Label htmlFor="due_date">Due Date</Label>
               <Input id="due_date" type="date" {...register('due_date')} />
             </div>
+          </div>
+
+          {/* Follow-up date */}
+          <div className="space-y-1.5">
+            <Label htmlFor="follow_up_date">Follow-up Date</Label>
+            <Input id="follow_up_date" type="date" {...register('follow_up_date')} />
+            <p className="text-xs text-muted-foreground">For appeals & AR follow-ups — when to check back on this task.</p>
           </div>
 
           {/* Notes */}
